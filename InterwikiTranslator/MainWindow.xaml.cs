@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -108,7 +109,11 @@ namespace InterwikiTranslator
                 if (wordpair.Value != "")
                 {                    
                     result = result.Replace(wordpair.Key, wordpair.Value);
-                    result = result.Replace(wordpair.Key.ToLower(), wordpair.Value.ToLower()); // dirty hack
+                    // next lines are for lowercase link in wikitext (less dirty hack than before)
+                    // only first letter is lowercased because other text may have any case
+                    string lowercasekey = Char.ToLower(wordpair.Key[0]) + wordpair.Key.Substring(1);
+                    string lowercasevalue = Char.ToLower(wordpair.Value[0]) + wordpair.Value.Substring(1);
+                    result = result.Replace(lowercasekey, lowercasevalue); 
                 }
             }
             return result;
