@@ -107,11 +107,12 @@ namespace InterwikiTranslator
             foreach (var wordpair in pagetoiwiki)
             {
                 if (wordpair.Value != "")
-                {                    
-                    result = result.Replace(wordpair.Key, wordpair.Value);
+                {
+                    string key = wordpair.Key.Replace('_', ' '); // normalize underscores
+                    result = result.Replace(key, wordpair.Value);
                     // next lines are for lowercase link in wikitext (less dirty hack than before)
                     // only first letter is lowercased because other text may have any case
-                    string lowercasekey = Char.ToLower(wordpair.Key[0]) + wordpair.Key.Substring(1);
+                    string lowercasekey = Char.ToLower(key[0]) + key.Substring(1);
                     string lowercasevalue = Char.ToLower(wordpair.Value[0]) + wordpair.Value.Substring(1);
                     result = result.Replace(lowercasekey, lowercasevalue); 
                 }
@@ -122,16 +123,32 @@ namespace InterwikiTranslator
         private IEnumerable<string> LoadOriginalPage()
         {
             worker.ReportProgress(1, "Loading original page link list");
-            XmlDocument xmllinksdocument = new XmlDocument();
-            xmllinksdocument.LoadXml(GetFromURL(@"http://en.wikipedia.org/w/api.php?action=parse&prop=links&format=xml&page=" + Uri.EscapeDataString(pagename)));
 
-            XmlNodeList xmllinkscollection = xmllinksdocument.GetElementsByTagName("pl");
+            XmlNodeList xmllinkscollection = GetNodeListByPropAndTagname("links", "pl");
 
             var validlinks = from XmlNode c in xmllinkscollection
                              orderby c.InnerText.Length descending
                              where c.Attributes["exists"] != null                             
                              select c.InnerText;
-            return validlinks;
+
+            // also process categories
+            XmlNodeList xmlcatscollection = GetNodeListByPropAndTagname("categories", "cl");
+
+            var catlinks = from XmlNode c in xmlcatscollection
+                           orderby c.InnerText.Length descending                           
+                           select "Category:" + c.InnerText;
+
+            var alllinks = validlinks.Concat(catlinks).OrderByDescending(str => str.Length);
+
+            return alllinks;
+        }
+
+        private XmlNodeList GetNodeListByPropAndTagname(string prop, string tagname)
+        {
+            XmlDocument xmlcatsdocument = new XmlDocument();
+            xmlcatsdocument.LoadXml(GetFromURL(@"http://en.wikipedia.org/w/api.php?action=parse&prop=" + prop + @"&format=xml&page=" + Uri.EscapeDataString(pagename)));
+            XmlNodeList xmlcatscollection = xmlcatsdocument.GetElementsByTagName(tagname);
+            return xmlcatscollection;
         }
 
         private string GetFromURL(string url)
