@@ -23,7 +23,7 @@ namespace InterwikiTranslator
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
-    public partial class MainWindow : Window
+    public partial class MainWindow : Window, IDisposable
     {
         public MainWindow()
         {
@@ -161,6 +161,21 @@ namespace InterwikiTranslator
                 wikitext = client.DownloadString(url);
             }
             return wikitext;
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                // dispose managed resources
+                worker.Dispose();
+            }            
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
     }
 }
