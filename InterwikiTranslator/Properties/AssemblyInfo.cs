@@ -8,11 +8,11 @@ using System.Windows;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("InterwikiTranslator")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyDescription("Translate links in Wikipedia articles using MediaWiki langlinks feature")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
+[assembly: AssemblyCompany("Alexander Grebenkov")]
 [assembly: AssemblyProduct("InterwikiTranslator")]
-[assembly: AssemblyCopyright("Copyright ©  2013")]
+[assembly: AssemblyCopyright("Copyright © Alexander Grebenkov 2013")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
