@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -37,14 +38,21 @@ namespace InterwikiTranslator
         private void DoWork(object sender,
             DoWorkEventArgs e)
         {
-            e.Result = TranslateLinks((string)e.Argument);
+            e.Result = TranslateLinks((srctargetpair)e.Argument);
         }
 
+        private struct srctargetpair
+        {
+            public string sourcesite;
+            public string targetlang;
+        }
 
         private void ProcessURL(object sender, RoutedEventArgs e)
         {
             pagename = tURL.Text;
-            GetWikitext(pagename);
+            string sourcesite = tSourceWiki.Text;
+
+            GetWikitext(sourcesite, pagename);
             tSource.Text = wikitext;
             
             worker = new BackgroundWorker();
@@ -53,17 +61,17 @@ namespace InterwikiTranslator
             worker.ProgressChanged += worker_ProgressChanged;
             worker.WorkerReportsProgress = true;
 
-            worker.RunWorkerAsync(wikitext);
+            worker.RunWorkerAsync(new srctargetpair { sourcesite = sourcesite, targetlang = tTargetWiki.Text });
         }
 
-        private void GetWikitext(string pagename)
-        {            
-            wikitext = GetFromURL(@"http://en.wikipedia.org/w/index.php?action=raw&title=" + Uri.EscapeDataString(pagename));            
+        private void GetWikitext(string sourcesite, string articlename)
+        {     
+            wikitext = GetFromURL(@"http://" + sourcesite + @"/w/index.php?action=raw&title=" + Uri.EscapeDataString(articlename));            
         }
 
         void worker_ProgressChanged(object sender, ProgressChangedEventArgs e)
         {
-            tResult.Text = (string)e.UserState + ": " + e.ProgressPercentage.ToString() + " %";
+            tResult.Text = (string)e.UserState + ": " + e.ProgressPercentage.ToString(CultureInfo.CurrentCulture) + " %";
         }
 
         void worker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
@@ -71,30 +79,31 @@ namespace InterwikiTranslator
             tResult.Text = (string)e.Result;
         }
 
-        private string TranslateLinks(string wikitext)
+        private string TranslateLinks(srctargetpair arguments)
         {
-            var validlinks = LoadOriginalPage();
+            var validlinks = LoadOriginalPage(arguments.sourcesite);
 
-            Dictionary<string, string> pagetoiwiki = MakeTranslationsList(validlinks);
+            Dictionary<string, string> pagetoiwiki = MakeTranslationsList(validlinks, arguments);
 
             return ReplaceWords(pagetoiwiki);
         }
 
-        private Dictionary<string, string> MakeTranslationsList(IEnumerable<string> validlinks)
+        private Dictionary<string, string> MakeTranslationsList(IEnumerable<string> validlinks, srctargetpair arguments)
         {
             Dictionary<string, string> pagetoiwiki = new Dictionary<string, string>();
             int i = 0;
             foreach (string link in validlinks)
             {
+                // ERROR: do not access controls in background worker directly
                 worker.ReportProgress(Convert.ToInt32(((decimal)i / (decimal)validlinks.Count()) * 100), "Processing interwiki");
                 XmlDocument interwikipage = new XmlDocument();
-                interwikipage.LoadXml(GetFromURL(@"http://" + tSourceWiki.Text + @"/w/api.php?action=parse&redirects&prop=langlinks&format=xml&page=" + link));
+                interwikipage.LoadXml(GetFromURL(@"http://" + arguments.sourcesite + @"/w/api.php?action=parse&redirects&prop=langlinks&format=xml&page=" + link));
                 XmlNodeList langlinks = interwikipage.GetElementsByTagName("ll");
-                var rulist = from XmlNode c in langlinks
-                             where c.Attributes["lang"].Value == tTargetWiki.Text
+                var translatedlist = from XmlNode c in langlinks
+                             where c.Attributes["lang"].Value == arguments.targetlang
                              select c.InnerText;
-                string rulink = rulist.Count() != 0 ? rulist.First() : "";
-                pagetoiwiki.Add(link, rulink);
+                string translatedlink = translatedlist.Count() != 0 ? translatedlist.First() : "";
+                pagetoiwiki.Add(link, translatedlink);
                 ++i;
                 Thread.Sleep(1000);
             }
@@ -106,25 +115,25 @@ namespace InterwikiTranslator
             string result = wikitext;
             foreach (var wordpair in pagetoiwiki)
             {
-                if (wordpair.Value != "")
+                if (!String.IsNullOrEmpty(wordpair.Value))
                 {
                     string key = wordpair.Key.Replace('_', ' '); // normalize underscores
                     result = result.Replace(key, wordpair.Value);
                     // next lines are for lowercase link in wikitext (less dirty hack than before)
                     // only first letter is lowercased because other text may have any case
-                    string lowercasekey = Char.ToLower(key[0]) + key.Substring(1);
-                    string lowercasevalue = Char.ToLower(wordpair.Value[0]) + wordpair.Value.Substring(1);
+                    string lowercasekey = Char.ToLower(key[0], CultureInfo.CurrentCulture) + key.Substring(1);
+                    string lowercasevalue = Char.ToLower(wordpair.Value[0], CultureInfo.CurrentCulture) + wordpair.Value.Substring(1);
                     result = result.Replace(lowercasekey, lowercasevalue); 
                 }
             }
             return result;
         }
 
-        private IEnumerable<string> LoadOriginalPage()
+        private IEnumerable<string> LoadOriginalPage(string sourcesite)
         {
             worker.ReportProgress(1, "Loading original page link list");
 
-            XmlNodeList xmllinkscollection = GetNodeListByPropAndTagname("links", "pl");
+            XmlNodeList xmllinkscollection = GetNodeListByPropAndTagname(sourcesite, "links", "pl");
 
             var validlinks = from XmlNode c in xmllinkscollection
                              orderby c.InnerText.Length descending
@@ -132,7 +141,7 @@ namespace InterwikiTranslator
                              select c.InnerText;
 
             // also process categories
-            XmlNodeList xmlcatscollection = GetNodeListByPropAndTagname("categories", "cl");
+            XmlNodeList xmlcatscollection = GetNodeListByPropAndTagname(sourcesite, "categories", "cl");
 
             var catlinks = from XmlNode c in xmlcatscollection
                            orderby c.InnerText.Length descending                           
@@ -143,24 +152,24 @@ namespace InterwikiTranslator
             return alllinks;
         }
 
-        private XmlNodeList GetNodeListByPropAndTagname(string prop, string tagname)
+        private XmlNodeList GetNodeListByPropAndTagname(string sourcesite, string prop, string tagname)
         {
             XmlDocument xmlcatsdocument = new XmlDocument();
-            xmlcatsdocument.LoadXml(GetFromURL(@"http://en.wikipedia.org/w/api.php?action=parse&prop=" + prop + @"&format=xml&page=" + Uri.EscapeDataString(pagename)));
+            xmlcatsdocument.LoadXml(GetFromURL(@"http://"+ sourcesite + @"/w/api.php?action=parse&prop=" + prop + @"&format=xml&page=" + Uri.EscapeDataString(pagename)));
             XmlNodeList xmlcatscollection = xmlcatsdocument.GetElementsByTagName(tagname);
             return xmlcatscollection;
         }
 
-        private string GetFromURL(string url)
+        private static string GetFromURL(string url)
         {
-            string wikitext;
+            string pagetext;
             using (WebClient client = new WebClient())
             {
                 client.Headers["User-Agent"] = "InterwikiTranslator/1.0";
                 client.Encoding = System.Text.Encoding.UTF8;                
-                wikitext = client.DownloadString(url);
+                pagetext = client.DownloadString(url);
             }
-            return wikitext;
+            return pagetext;
         }
 
         protected virtual void Dispose(bool disposing)
