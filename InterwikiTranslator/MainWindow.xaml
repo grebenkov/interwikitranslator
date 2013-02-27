@@ -1,22 +1,45 @@
 ﻿<Window x:Class="InterwikiTranslator.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="MainWindow" Height="350" Width="525">
+        Title="Interwiki translator" Height="350" Width="525">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition/>
             <RowDefinition Height="2*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <TextBox Name="tSource" VerticalScrollBarVisibility="Auto" AcceptsReturn="True" TextWrapping="Wrap" TextOptions.TextFormattingMode="Display"></TextBox>
-        <TextBox Name="tResult" VerticalScrollBarVisibility="Auto" AcceptsReturn="True" TextWrapping="Wrap" TextOptions.TextFormattingMode="Display" Grid.Row="1"></TextBox>
+        <TextBox Name="tSource" VerticalScrollBarVisibility="Auto" AcceptsReturn="True" TextWrapping="Wrap" TextOptions.TextFormattingMode="Display" Margin="5"></TextBox>
+        <TextBox Name="tResult" VerticalScrollBarVisibility="Auto" AcceptsReturn="True" TextWrapping="Wrap" TextOptions.TextFormattingMode="Display" Grid.Row="1" Margin="5"></TextBox>
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"></ColumnDefinition>
                 <ColumnDefinition Width="Auto"></ColumnDefinition>
             </Grid.ColumnDefinitions>
-            <TextBox Name="tURL" Grid.Column="0"></TextBox>
-            <Button Grid.Column="1" Width="30" Content="Go" HorizontalAlignment="Right" Click="ProcessURL"></Button>
+            <Grid.RowDefinitions>
+                <RowDefinition></RowDefinition>
+                <RowDefinition></RowDefinition>
+            </Grid.RowDefinitions>
+            <Grid Grid.Row="0" Grid.ColumnSpan="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"></ColumnDefinition>
+                    <ColumnDefinition Width="3*"></ColumnDefinition>
+                    <ColumnDefinition Width="Auto"></ColumnDefinition>
+                    <ColumnDefinition Width="*"></ColumnDefinition>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Margin="5" VerticalAlignment="Center">Source:</TextBlock>
+                <TextBox Name="tSourceWiki" Margin="5,5,5,5" HorizontalContentAlignment="Stretch" Grid.Column="1" Text="en.wikipedia.org" />
+                <TextBlock Grid.Column="2" Margin="5" VerticalAlignment="Center">Target language:</TextBlock>
+                <TextBox Name="tTargetWiki" Margin="5,5,5,5" HorizontalContentAlignment="Stretch" Grid.Column="4" Text="ru" />
+            </Grid>
+            <Grid Grid.Column="0" Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"></ColumnDefinition>
+                    <ColumnDefinition Width="*"></ColumnDefinition>
+                </Grid.ColumnDefinitions>
+                <TextBlock Margin="5" VerticalAlignment="Center">Article Name:</TextBlock>
+                <TextBox Name="tURL" Margin="5,5,5,5" HorizontalContentAlignment="Stretch" Grid.Column="1" />
+            </Grid>
+            <Button Grid.Row="1" Grid.Column="1" Width="30" Content="Go" HorizontalAlignment="Right" Click="ProcessURL" Margin="5" Padding="5"></Button>
         </Grid>
     </Grid>
 </Window>

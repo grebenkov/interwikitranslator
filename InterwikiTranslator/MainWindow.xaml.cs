@@ -88,10 +88,10 @@ namespace InterwikiTranslator
             {
                 worker.ReportProgress(Convert.ToInt32(((decimal)i / (decimal)validlinks.Count()) * 100), "Processing interwiki");
                 XmlDocument interwikipage = new XmlDocument();
-                interwikipage.LoadXml(GetFromURL(@"http://en.wikipedia.org/w/api.php?action=parse&redirects&prop=langlinks&format=xml&page=" + link));
+                interwikipage.LoadXml(GetFromURL(@"http://" + tSourceWiki.Text + @"/w/api.php?action=parse&redirects&prop=langlinks&format=xml&page=" + link));
                 XmlNodeList langlinks = interwikipage.GetElementsByTagName("ll");
                 var rulist = from XmlNode c in langlinks
-                             where c.Attributes["lang"].Value == "ru"
+                             where c.Attributes["lang"].Value == tTargetWiki.Text
                              select c.InnerText;
                 string rulink = rulist.Count() != 0 ? rulist.First() : "";
                 pagetoiwiki.Add(link, rulink);
